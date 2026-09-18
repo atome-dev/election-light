@@ -1,0 +1,10 @@
+.git
+.gitignore
+.idea
+.wrangler
+wrangler.toml
+.assetsignore
+node_modules
+.dev.vars
+.DS_Store
+Thumbs.db
