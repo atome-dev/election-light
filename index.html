@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Élection des délégués</title>
+<style>
+  :root{
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --accent: #16a34a;
+    --danger: #dc2626;
+    --border: #e2e8f0;
+    --shadow: 0 2px 8px rgba(15,23,42,.08);
+    --radius: 14px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  header{
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    position: sticky;
+    top:0;
+    z-index: 10;
+  }
+  header h1{
+    font-size: 20px;
+    margin:0;
+  }
+  #counter-badge{
+    display:none;
+    align-items:center;
+    gap:8px;
+    background: #eef2ff;
+    color: var(--primary-dark);
+    font-weight:600;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 15px;
+  }
+  main{
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  section{ display:none; }
+  section.active{ display:block; }
+
+  h2{ margin-top:0; }
+  .hint{ color: var(--muted); font-size: 14px; margin-top: -6px; }
+
+  /* --- Candidates form --- */
+  #form-candidate{
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px;
+    display:grid;
+    gap:14px;
+    margin-bottom: 22px;
+  }
+  .field label{
+    display:block;
+    font-size: 13px;
+    font-weight:600;
+    color: var(--muted);
+    margin-bottom:6px;
+  }
+  .field input[type=text]{
+    width:100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 16px;
+    background: #fff;
+  }
+  .row-2{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+  @media (max-width: 560px){ .row-2{ grid-template-columns: 1fr; } }
+
+  button{
+    font-family: inherit;
+    cursor:pointer;
+    border:none;
+    border-radius: 10px;
+    font-weight:700;
+    font-size: 15px;
+    padding: 13px 18px;
+    transition: transform .05s ease, opacity .15s ease;
+  }
+  button:active{ transform: scale(.97); }
+  button:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn-primary{ background: var(--primary); color:#fff; }
+  .btn-primary:hover:not(:disabled){ background: var(--primary-dark); }
+  .btn-secondary{ background:#fff; color: var(--ink); border:1px solid var(--border) !important; border-style:solid; }
+  .btn-danger{ background: #fee2e2; color: var(--danger); }
+  .btn-ghost{ background: transparent; color: var(--muted); }
+
+  #candidate-list{ list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+  #candidate-list li{
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .cand-name{ font-weight:700; }
+  .cand-sub{ color: var(--muted); font-size: 14px; }
+  .remove-btn{
+    background:#fef2f2; color:var(--danger); border-radius:999px;
+    width:34px; height:34px; padding:0; font-size:18px; line-height:1;
+  }
+
+  .empty-state{
+    text-align:center;
+    color: var(--muted);
+    padding: 30px 10px;
+  }
+
+  .actions-bar{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top: 18px;
+  }
+
+  /* --- Vote view --- */
+  #vote-counter-line{
+    text-align:center;
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  #pool-title{ font-size: 15px; color: var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.03em; margin: 18px 0 10px; }
+
+  #candidates-pool{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    min-height: 70px;
+  }
+  .card{
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 12px 16px;
+    touch-action: none;
+    cursor: grab;
+    min-width: 150px;
+    border: 2px solid transparent;
+  }
+  .card.dragging-source{ opacity:.35; }
+  .card .cand-name{ font-size: 15px; }
+  .card .cand-sub{ font-size: 13px; }
+
+  .ghost{
+    position: fixed;
+    pointer-events:none;
+    z-index: 999;
+    opacity: .95;
+    box-shadow: 0 8px 24px rgba(15,23,42,.25);
+    transform: scale(1.04) rotate(-1deg);
+    width: 180px;
+  }
+
+  .drop-zones{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 18px;
+  }
+  @media (max-width: 560px){ .drop-zones{ grid-template-columns: 1fr; } }
+
+  .dropzone{
+    background: #fbfdff;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    min-height: 110px;
+    padding: 16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .dropzone h3{
+    margin:0;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+  }
+  .dropzone.over{
+    border-color: var(--primary);
+    background: #eef2ff;
+  }
+  .dropzone .placeholder{
+    color: #a3adba;
+    font-size: 14px;
+    text-align:center;
+    padding: 14px 0;
+  }
+  .dropzone .card{
+    cursor:pointer;
+    border-color: var(--primary);
+  }
+
+  #recap-line{
+    text-align:center;
+    color: var(--muted);
+    font-size: 14px;
+    min-height: 20px;
+    margin-top: 14px;
+  }
+
+  #vote-actions{
+    display:flex;
+    justify-content:center;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  #toast{
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: #111827;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight:600;
+    opacity: 0;
+    pointer-events:none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 1000;
+  }
+  #toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  #depouillement-bar{
+    text-align:center;
+    margin-top: 26px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* --- Results --- */
+  #results-list{
+    list-style:none;
+    margin:0; padding:0;
+    display:grid;
+    gap: 12px;
+  }
+  #results-list li{
+    background: var(--card);
+    box-shadow: var(--shadow);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display:flex;
+    align-items:center;
+    gap: 14px;
+  }
+  .rank-badge{
+    width: 42px; height:42px;
+    border-radius: 50%;
+    background: var(--primary);
+    color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800;
+    flex-shrink:0;
+  }
+  #results-list li:nth-child(1) .rank-badge{ background:#d4a017; }
+  #results-list li:nth-child(2) .rank-badge{ background:#8a94a3; }
+  #results-list li:nth-child(3) .rank-badge{ background:#b06a3a; }
+  .result-info{ flex:1; }
+  .result-score{ font-weight:700; color: var(--ink); white-space:nowrap; }
+  .result-score small{ color: var(--muted); font-weight:600; }
+  .tie-note{ font-size: 12px; color: var(--danger); font-weight:600; }
+
+  #full-results{ margin-top: 26px; }
+  #full-results-list{ list-style:decimal; padding-left: 22px; color: var(--muted); font-size: 14px; display:grid; gap:6px; }
+
+  .confirm-danger{ color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Élection des délégués</h1>
+  <div id="counter-badge">🗳️ <span id="counter-value">0</span> vote(s) validé(s)</div>
+</header>
+
+<main>
+
+  <!-- VIEW 1 : CANDIDATES -->
+  <section id="view-candidates">
+    <h2>Liste des candidats</h2>
+    <p class="hint">Ajoutez au moins 2 candidats avant de démarrer le vote.</p>
+
+    <form id="form-candidate">
+      <div class="row-2">
+        <div class="field">
+          <label for="input-prenom">Prénom</label>
+          <input type="text" id="input-prenom" placeholder="Ex : Julie" required>
+        </div>
+        <div class="field">
+          <label for="input-enfant">Prénom de l'enfant</label>
+          <input type="text" id="input-enfant" placeholder="Ex : Léo" required>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Ajouter le candidat</button>
+    </form>
+
+    <ul id="candidate-list"></ul>
+    <p id="candidates-empty" class="empty-state">Aucun candidat pour l'instant.</p>
+
+    <div class="actions-bar">
+      <button id="btn-start-vote" class="btn-primary" disabled>Démarrer le vote →</button>
+    </div>
+  </section>
+
+  <!-- VIEW 2 : VOTE -->
+  <section id="view-vote">
+    <p id="vote-counter-line">Faites glisser un candidat vers <strong>Choix 1</strong> et un autre vers <strong>Choix 2</strong>, puis validez.</p>
+
+    <div class="drop-zones">
+      <div class="dropzone" id="zone-1" data-choice="1"><h3>Choix 1</h3></div>
+      <div class="dropzone" id="zone-2" data-choice="2"><h3>Choix 2</h3></div>
+    </div>
+
+    <p id="recap-line"></p>
+
+    <div id="vote-actions">
+      <button id="btn-validate" class="btn-primary" disabled>✓ Valider le vote</button>
+    </div>
+
+    <p id="pool-title">Candidats</p>
+    <div id="candidates-pool"></div>
+
+    <div id="depouillement-bar">
+      <button id="btn-edit-candidates" class="btn-ghost">← Modifier la liste des candidats</button>
+      <button id="btn-depouillement" class="btn-secondary">📊 Dépouillement</button>
+    </div>
+  </section>
+
+  <!-- VIEW 3 : RESULTS -->
+  <section id="view-results">
+    <h2>Résultats du dépouillement</h2>
+    <p class="hint" id="results-total"></p>
+    <ol id="results-list"></ol>
+
+    <div id="full-results">
+      <button id="btn-toggle-full" class="btn-ghost">Voir le détail complet ▾</button>
+      <ol id="full-results-list" style="display:none;"></ol>
+    </div>
+
+    <div class="actions-bar">
+      <button id="btn-new-election" class="btn-danger">🔄 Nouvelle élection</button>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'election-light-state-v1';
+
+/** @type {{phase:'candidates'|'voting'|'results', candidates:Array, votes:Array, assignments:{1:?string,2:?string}}} */
+let state = loadState();
+
+function defaultState(){
+  return { phase: 'candidates', candidates: [], votes: [], assignments: { 1: null, 2: null } };
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultState(), parsed, { assignments: parsed.assignments || { 1: null, 2: null } });
+  }catch(e){
+    console.warn('Impossible de lire le stockage local, démarrage à vide.', e);
+    return defaultState();
+  }
+}
+
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.warn('Impossible d\'écrire le stockage local.', e);
+    showToast('⚠️ Sauvegarde locale indisponible sur cet appareil');
+  }
+}
+
+function uid(){
+  return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+function showToast(msg, duration=2000){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=> t.classList.remove('show'), duration);
+}
+
+function candidateById(id){
+  return state.candidates.find(c => c.id === id);
+}
+
+/* ---------------- ROUTING / RENDER ---------------- */
+
+function render(){
+  document.getElementById('view-candidates').classList.toggle('active', state.phase === 'candidates');
+  document.getElementById('view-vote').classList.toggle('active', state.phase === 'voting');
+  document.getElementById('view-results').classList.toggle('active', state.phase === 'results');
+
+  const badge = document.getElementById('counter-badge');
+  badge.style.display = (state.phase === 'voting' || state.phase === 'results') ? 'flex' : 'none';
+  document.getElementById('counter-value').textContent = state.votes.length;
+
+  if(state.phase === 'candidates') renderCandidatesView();
+  if(state.phase === 'voting') renderVoteView();
+  if(state.phase === 'results') renderResultsView();
+}
+
+/* ---------------- VIEW 1: CANDIDATES ---------------- */
+
+function renderCandidatesView(){
+  const list = document.getElementById('candidate-list');
+  const empty = document.getElementById('candidates-empty');
+  list.innerHTML = '';
+
+  if(state.candidates.length === 0){
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    state.candidates.forEach(c => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <div>
+          <div class="cand-name">${escapeHtml(c.prenom)}</div>
+          <div class="cand-sub">${escapeHtml(c.enfant)}</div>
+        </div>
+      `;
+      const btn = document.createElement('button');
+      btn.className = 'remove-btn';
+      btn.textContent = '✕';
+      btn.title = 'Retirer ce candidat';
+      btn.addEventListener('click', () => {
+        state.candidates = state.candidates.filter(x => x.id !== c.id);
+        saveState();
+        renderCandidatesView();
+      });
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  document.getElementById('btn-start-vote').disabled = state.candidates.length < 2;
+}
+
+document.getElementById('form-candidate').addEventListener('submit', e => {
+  e.preventDefault();
+  const prenom = document.getElementById('input-prenom').value.trim();
+  const enfant = document.getElementById('input-enfant').value.trim();
+
+  if(!prenom || !enfant) return;
+
+  state.candidates.push({ id: uid(), prenom, enfant });
+  saveState();
+
+  e.target.reset();
+  document.getElementById('input-prenom').focus();
+  renderCandidatesView();
+});
+
+document.getElementById('btn-start-vote').addEventListener('click', () => {
+  if(state.candidates.length < 2) return;
+  if(!confirm('Démarrer le vote avec ' + state.candidates.length + ' candidats ?\nVous ne pourrez plus modifier la liste tant que des votes ont été enregistrés.')) return;
+  state.phase = 'voting';
+  state.assignments = { 1: null, 2: null };
+  saveState();
+  render();
+});
+
+/* ---------------- VIEW 2: VOTE ---------------- */
+
+function renderVoteView(){
+  const pool = document.getElementById('candidates-pool');
+  const zone1 = document.getElementById('zone-1');
+  const zone2 = document.getElementById('zone-2');
+
+  pool.innerHTML = '';
+  zone1.innerHTML = '<h3>Choix 1</h3>';
+  zone2.innerHTML = '<h3>Choix 2</h3>';
+
+  const assignedIds = new Set(Object.values(state.assignments).filter(Boolean));
+
+  state.candidates
+    .filter(c => !assignedIds.has(c.id))
+    .forEach(c => pool.appendChild(makeCard(c)));
+
+  [1,2].forEach(choice => {
+    const zoneEl = choice === 1 ? zone1 : zone2;
+    const candId = state.assignments[choice];
+    if(candId){
+      const cand = candidateById(candId);
+      if(cand) zoneEl.appendChild(makeCard(cand));
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'placeholder';
+      ph.textContent = 'Glissez un candidat ici';
+      zoneEl.appendChild(ph);
+    }
+  });
+
+  const c1 = state.assignments[1] ? candidateById(state.assignments[1]) : null;
+  const c2 = state.assignments[2] ? candidateById(state.assignments[2]) : null;
+  const recap = document.getElementById('recap-line');
+  if(c1 && c2){
+    recap.textContent = `Choix 1 : ${c1.prenom} (${c1.enfant})  •  Choix 2 : ${c2.prenom} (${c2.enfant})`;
+  } else {
+    recap.textContent = '';
+  }
+  document.getElementById('btn-validate').disabled = !(c1 && c2);
+
+  document.getElementById('btn-edit-candidates').style.display = state.votes.length === 0 ? 'inline-block' : 'none';
+}
+
+function makeCard(candidate){
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = `<div class="cand-name">${escapeHtml(candidate.prenom)}</div><div class="cand-sub">${escapeHtml(candidate.enfant)}</div>`;
+  attachDragHandlers(el, candidate.id);
+  return el;
+}
+
+function attachDragHandlers(cardEl, candidateId){
+  cardEl.addEventListener('pointerdown', onPointerDown);
+
+  function onPointerDown(e){
+    if(e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+
+    const startX = e.clientX, startY = e.clientY;
+    let dragging = false;
+    let ghost = null;
+    let currentZoneOver = null;
+
+    try{ cardEl.setPointerCapture(e.pointerId); }catch(err){}
+
+    function positionGhost(ev){
+      const rect = cardEl.getBoundingClientRect();
+      ghost.style.left = (ev.clientX - rect.width/2) + 'px';
+      ghost.style.top = (ev.clientY - rect.height/2) + 'px';
+    }
+
+    function updateZoneHighlight(ev){
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const zone = el ? el.closest('.dropzone') : null;
+      if(zone !== currentZoneOver){
+        if(currentZoneOver) currentZoneOver.classList.remove('over');
+        if(zone) zone.classList.add('over');
+        currentZoneOver = zone;
+      }
+    }
+
+    function onMove(ev){
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if(!dragging && Math.hypot(dx, dy) > 10){
+        dragging = true;
+        ghost = cardEl.cloneNode(true);
+        ghost.classList.add('ghost');
+        ghost.style.position = 'fixed';
+        document.body.appendChild(ghost);
+        cardEl.classList.add('dragging-source');
+      }
+      if(dragging){
+        positionGhost(ev);
+        updateZoneHighlight(ev);
+      }
+    }
+
+    function onUp(ev){
+      cardEl.removeEventListener('pointermove', onMove);
+      cardEl.removeEventListener('pointerup', onUp);
+      cardEl.removeEventListener('pointercancel', onUp);
+      try{ cardEl.releasePointerCapture(ev.pointerId); }catch(err){}
+
+      if(currentZoneOver) currentZoneOver.classList.remove('over');
+
+      if(dragging){
+        if(ghost) ghost.remove();
+        cardEl.classList.remove('dragging-source');
+        const dropChoice = currentZoneOver ? currentZoneOver.dataset.choice : null;
+        handleDrop(candidateId, dropChoice ? Number(dropChoice) : null);
+      } else {
+        handleTap(candidateId);
+      }
+    }
+
+    cardEl.addEventListener('pointermove', onMove);
+    cardEl.addEventListener('pointerup', onUp);
+    cardEl.addEventListener('pointercancel', onUp);
+  }
+}
+
+function currentChoiceOf(candidateId){
+  if(state.assignments[1] === candidateId) return 1;
+  if(state.assignments[2] === candidateId) return 2;
+  return null;
+}
+
+function handleDrop(candidateId, targetChoice){
+  const current = currentChoiceOf(candidateId);
+
+  if(!targetChoice){
+    if(current) state.assignments[current] = null;
+    renderVoteView();
+    return;
+  }
+  if(targetChoice === current){
+    renderVoteView();
+    return;
+  }
+  if(current) state.assignments[current] = null;
+  state.assignments[targetChoice] = candidateId;
+  renderVoteView();
+}
+
+function handleTap(candidateId){
+  const current = currentChoiceOf(candidateId);
+  if(current){
+    state.assignments[current] = null;
+    renderVoteView();
+    return;
+  }
+  if(!state.assignments[1]) state.assignments[1] = candidateId;
+  else if(!state.assignments[2]) state.assignments[2] = candidateId;
+  else { showToast('Les deux choix sont déjà remplis, retirez-en un d\'abord'); return; }
+  renderVoteView();
+}
+
+document.getElementById('btn-validate').addEventListener('click', () => {
+  const c1 = state.assignments[1], c2 = state.assignments[2];
+  if(!c1 || !c2) return;
+  state.votes.push({ choix1Id: c1, choix2Id: c2 });
+  state.assignments = { 1: null, 2: null };
+  saveState();
+  render();
+  showToast('✓ Vote enregistré. Passez la tablette au suivant !');
+});
+
+document.getElementById('btn-edit-candidates').addEventListener('click', () => {
+  state.phase = 'candidates';
+  saveState();
+  render();
+});
+
+document.getElementById('btn-depouillement').addEventListener('click', () => {
+  if(state.votes.length === 0){
+    if(!confirm('Aucun vote n\'a encore été enregistré. Afficher les résultats quand même ?')) return;
+  } else if(!confirm('Terminer le vote et afficher les résultats ?\nCette action est définitive.')){
+    return;
+  }
+  state.phase = 'results';
+  saveState();
+  render();
+});
+
+/* ---------------- VIEW 3: RESULTS ---------------- */
+
+function computeResults(){
+  const tally = new Map();
+  state.candidates.forEach(c => tally.set(c.id, { candidate: c, score1: 0, score2: 0 }));
+
+  state.votes.forEach(v => {
+    if(tally.has(v.choix1Id)) tally.get(v.choix1Id).score1++;
+    if(tally.has(v.choix2Id)) tally.get(v.choix2Id).score2++;
+  });
+
+  const ranked = Array.from(tally.values()).sort((a, b) =>
+    b.score1 - a.score1 ||
+    b.score2 - a.score2 ||
+    a.candidate.prenom.localeCompare(b.candidate.prenom)
+  );
+
+  return ranked;
+}
+
+function renderResultsView(){
+  const ranked = computeResults();
+  const top3 = ranked.slice(0, 3);
+
+  let podium = top3;
+  let tieNote = '';
+  if(top3.length === 3){
+    const boundary = top3[2];
+    const extras = ranked.slice(3).filter(r => r.score1 === boundary.score1 && r.score2 === boundary.score2);
+    if(extras.length > 0){
+      podium = top3.concat(extras);
+      tieNote = `Égalité pour la 3ᵉ place (${boundary.score1} votes${boundary.score2 ? ' +' + boundary.score2 : ''})`;
+    }
+  }
+
+  document.getElementById('results-total').textContent = `${state.votes.length} vote(s) validé(s) au total.`;
+
+  const list = document.getElementById('results-list');
+  list.innerHTML = '';
+  podium.forEach((r, i) => {
+    const isTiedExtra = tieNote && i >= 3;
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div class="rank-badge">${isTiedExtra ? '3' : (i+1)}</div>
+      <div class="result-info">
+        <div class="cand-name">${escapeHtml(r.candidate.prenom)}</div>
+        <div class="cand-sub">${escapeHtml(r.candidate.enfant)}</div>
+      </div>
+      <div class="result-score">${r.score1} vote${r.score1 !== 1 ? 's' : ''}${r.score2 ? ' <small>(+' + r.score2 + ')</small>' : ''}</div>
+    `;
+    list.appendChild(li);
+  });
+
+  const noteEl = document.getElementById('results-total');
+  const existingNote = document.getElementById('tie-note-el');
+  if(existingNote) existingNote.remove();
+  if(tieNote){
+    const p = document.createElement('p');
+    p.id = 'tie-note-el';
+    p.className = 'tie-note';
+    p.textContent = '⚠️ ' + tieNote;
+    noteEl.insertAdjacentElement('afterend', p);
+  }
+
+  const fullList = document.getElementById('full-results-list');
+  fullList.innerHTML = '';
+  ranked.forEach(r => {
+    const li = document.createElement('li');
+    li.textContent = `${r.candidate.prenom} (${r.candidate.enfant}) — Choix 1: ${r.score1}, Choix 2: ${r.score2}`;
+    fullList.appendChild(li);
+  });
+}
+
+document.getElementById('btn-toggle-full').addEventListener('click', (e) => {
+  const el = document.getElementById('full-results-list');
+  const showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : 'block';
+  e.target.textContent = showing ? 'Voir le détail complet ▾' : 'Masquer le détail ▴';
+});
+
+document.getElementById('btn-new-election').addEventListener('click', () => {
+  if(!confirm('Réinitialiser entièrement l\'application ?\nTous les candidats et tous les votes seront définitivement supprimés.')) return;
+  state = defaultState();
+  saveState();
+  render();
+});
+
+/* ---------------- UTILS ---------------- */
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ---------------- INIT ---------------- */
+
+render();
+</script>
+</body>
+</html>
