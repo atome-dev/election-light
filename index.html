@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Élection des parents référents</title>
+<link rel="stylesheet" href="css/popup.css">
 <style>
   :root{
     --bg: #f4f6f9;
@@ -43,6 +44,11 @@
   header h1{
     font-size: 20px;
     margin:0;
+  }
+  .header-right{
+    display:flex;
+    align-items:center;
+    gap: 12px;
   }
   #counter-badge{
     display:none;
@@ -304,7 +310,10 @@
 
 <header>
   <h1>Élection des parents référents</h1>
-  <div id="counter-badge">🗳️ <span id="counter-value">0</span> vote(s) validé(s)</div>
+  <div class="header-right">
+    <div id="counter-badge">🗳️ <span id="counter-value">0</span> vote(s) validé(s)</div>
+    <button type="button" class="btn-info" id="btn-open-info" aria-haspopup="dialog" aria-controls="info-modal">?</button>
+  </div>
 </header>
 
 <main>
@@ -379,6 +388,42 @@
 </main>
 
 <div id="toast"></div>
+
+<div id="info-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-title">À propos de cette application</h2>
+      <button type="button" class="modal-close" id="btn-close-info" aria-label="Fermer la boîte de dialogue">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-section">
+        <h3>👨‍💻 Auteur &amp; Licence</h3>
+        <p>Développé par <strong>Nicolas Chauvet, Atome Dev</strong>.</p>
+        <p>
+          Ce projet est libre et <strong>Open Source</strong> sous licence
+          <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT</a>.
+        </p>
+      </div>
+
+      <div class="info-section">
+        <h3>🐙 Code source &amp; Dépôt GitHub</h3>
+        <p>Le code source complet est disponible publiquement sur GitHub :</p>
+        <p>
+          👉 <a href="https://github.com/atome-dev/election-light" target="_blank" rel="noopener noreferrer" class="github-link">github.com/atome-dev/election-light</a>
+        </p>
+      </div>
+
+      <div class="info-section">
+        <h3>🔒 Fonctionnement</h3>
+        <p>Application 100% autonome, sans bibliothèque externe ni connexion serveur.</p>
+        <p>Les candidats et les votes sont stockés uniquement dans le navigateur (localStorage) : aucune donnée n'est envoyée ni ne quitte l'appareil.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal-action" id="btn-close-info-footer">Fermer</button>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -776,6 +821,25 @@ document.getElementById('btn-new-election').addEventListener('click', () => {
   saveState();
   render();
 });
+
+/* ---------------- INFO MODAL ---------------- */
+
+const infoModal = document.getElementById('info-modal');
+
+function openInfoModal(){
+  infoModal.classList.add('is-visible');
+  infoModal.setAttribute('aria-hidden', 'false');
+}
+function closeInfoModal(){
+  infoModal.classList.remove('is-visible');
+  infoModal.setAttribute('aria-hidden', 'true');
+}
+
+document.getElementById('btn-open-info').addEventListener('click', openInfoModal);
+document.getElementById('btn-close-info').addEventListener('click', closeInfoModal);
+document.getElementById('btn-close-info-footer').addEventListener('click', closeInfoModal);
+infoModal.addEventListener('click', e => { if(e.target === infoModal) closeInfoModal(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && infoModal.classList.contains('is-visible')) closeInfoModal(); });
 
 /* ---------------- UTILS ---------------- */
 
