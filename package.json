@@ -1,0 +1,9 @@
+{
+  "name": "election-light",
+  "private": true,
+  "scripts": {
+    "deploy": "npm run deploy:pages && npm run deploy:workers",
+    "deploy:pages": "npx wrangler pages deploy . --project-name=election-light",
+    "deploy:workers": "npx wrangler deploy"
+  }
+}
